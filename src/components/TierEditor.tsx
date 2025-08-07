@@ -35,7 +35,7 @@ function TierPartCard({ tierPart, onEdit, onExport, onRemove, onUpdateInfo, getT
   };
 
   return (
-    <div className="border rounded-lg p-6 hover:shadow-md transition-shadow relative">
+    <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-6 hover:shadow-md transition-shadow relative bg-white dark:bg-gray-800">
       <button
         onClick={onRemove}
         className="absolute top-2 right-2 text-red-500 hover:text-red-700 hover:bg-red-50 p-1 rounded-full transition-colors"
@@ -60,12 +60,12 @@ function TierPartCard({ tierPart, onEdit, onExport, onRemove, onUpdateInfo, getT
                 setTempName(tierPart.partName);
               }
             }}
-            className="text-xl font-bold text-gray-800 mb-2 bg-white border rounded px-2 py-1 text-center"
+            className="text-xl font-bold text-gray-800 dark:text-white mb-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-center"
             autoFocus
           />
         ) : (
           <h3 
-            className="text-xl font-bold text-blue-600 mb-2 cursor-pointer hover:bg-gray-100 px-2 py-1 rounded"
+            className="text-xl font-bold text-blue-600 dark:text-blue-400 mb-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 px-2 py-1 rounded"
             onClick={() => {
               setIsEditingName(true);
               setTempName(tierPart.partName);
@@ -90,13 +90,13 @@ function TierPartCard({ tierPart, onEdit, onExport, onRemove, onUpdateInfo, getT
                 setTempDescription(tierPart.description);
               }
             }}
-            className="text-sm text-gray-800 mb-3 bg-white border rounded px-2 py-1 w-full resize-none"
+            className="text-sm text-gray-800 dark:text-white mb-3 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 w-full resize-none"
             rows={2}
             autoFocus
           />
         ) : (
           <p 
-            className="text-sm text-gray-600 mb-3 cursor-pointer hover:bg-gray-100 px-2 py-1 rounded"
+            className="text-sm text-gray-600 dark:text-gray-300 mb-3 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 px-2 py-1 rounded"
             onClick={() => {
               setIsEditingDescription(true);
               setTempDescription(tierPart.description);
@@ -106,12 +106,12 @@ function TierPartCard({ tierPart, onEdit, onExport, onRemove, onUpdateInfo, getT
           </p>
         )}
         
-        <div className="bg-gray-50 rounded p-3">
-          <div className="text-2xl font-bold text-gray-800">
+        <div className="bg-gray-50 dark:bg-gray-700 rounded p-3">
+          <div className="text-2xl font-bold text-gray-800 dark:text-white">
             {getTotalChartCount(tierPart)}
           </div>
-          <div className="text-sm text-gray-600">Total Charts</div>
-          <div className="text-sm text-gray-600 mt-1">
+          <div className="text-sm text-gray-600 dark:text-gray-300">Total Charts</div>
+          <div className="text-sm text-gray-600 dark:text-gray-300 mt-1">
             {tierPart.tierList.length} Tiers
           </div>
         </div>
@@ -257,7 +257,7 @@ export function TierEditor() {
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-md p-4">
+      <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md p-4">
         <div className="flex">
           <div className="flex-shrink-0">
             <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
@@ -265,14 +265,14 @@ export function TierEditor() {
             </svg>
           </div>
           <div className="ml-3">
-            <h3 className="text-sm font-medium text-red-800">Error loading data</h3>
-            <div className="mt-2 text-sm text-red-700">
+            <h3 className="text-sm font-medium text-red-800 dark:text-red-200">Error loading data</h3>
+            <div className="mt-2 text-sm text-red-700 dark:text-red-300">
               <p>{error}</p>
             </div>
             <div className="mt-4">
               <button
                 onClick={loadData}
-                className="bg-red-100 hover:bg-red-200 text-red-800 px-4 py-2 rounded-md text-sm font-medium"
+                className="bg-red-100 dark:bg-red-800 hover:bg-red-200 dark:hover:bg-red-700 text-red-800 dark:text-red-200 px-4 py-2 rounded-md text-sm font-medium"
               >
                 Retry
               </button>
@@ -285,9 +285,9 @@ export function TierEditor() {
 
   return (
     <div className="space-y-6">
-      <div className="bg-white rounded-lg shadow-sm border p-6">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold text-gray-900">Tier Parts Overview</h2>
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Tier Parts Overview</h2>
           <button
             onClick={addNewTierPart}
             className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
@@ -295,7 +295,7 @@ export function TierEditor() {
             Add New Tier Part
           </button>
         </div>
-        <p className="text-gray-600 mb-6">
+        <p className="text-gray-600 dark:text-gray-300 mb-6">
           {tierParts.length}개의 티어 파트는 각각 완전히 다른 난이도표입니다. 수정하려는 파트를 선택하거나 JSON으로 내보내세요.
         </p>
         
@@ -315,7 +315,7 @@ export function TierEditor() {
           </div>
         ) : (
           <div className="text-center py-12">
-            <p className="text-gray-500 mb-4">No tier data available yet.</p>
+            <p className="text-gray-500 dark:text-gray-400 mb-4">No tier data available yet.</p>
             <button
               onClick={loadData}
               className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"

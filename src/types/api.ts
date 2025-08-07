@@ -195,3 +195,16 @@ export interface UpdateChartDto {
   illustratorName: string;
   radar: RadarDto;
 }
+
+// 버전 관련 타입들
+export interface GetVersionDto {
+  version: string;
+}
+
+export interface UpdateVersionDto {
+  version: string;
+}
+
+export interface VersionResponse {
+  version: string;
+}

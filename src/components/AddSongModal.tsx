@@ -11,6 +11,19 @@ interface AddSongModalProps {
 }
 
 const AddSongModal: React.FC<AddSongModalProps> = ({ isOpen, onClose, onSuccess }) => {
+  // 미리 정의된 장르 목록
+  const predefinedGenres = [
+    'BEMANI',
+    'ボーカロイド',
+    'SDVXオリジナル',
+    'EXIT TUNES',
+    'FLOOR',
+    '東方アレンジ',
+    'ひなビタ♪/バンめし♪',
+    'POPS&アニメ',
+    'その他'
+  ];
+
   const [formData, setFormData] = useState<NewSongDto>({
     songid: '',
     title: '',
@@ -51,8 +64,6 @@ const AddSongModal: React.FC<AddSongModalProps> = ({ isOpen, onClose, onSuccess 
     hold_count: '',
     tsumami_count: '',
   });
-
-  const [genreInput, setGenreInput] = useState('');
 
   // 모달이 열릴 때 최대 songIdx와 기존 songId 목록을 가져옴
   React.useEffect(() => {
@@ -149,20 +160,12 @@ const AddSongModal: React.FC<AddSongModalProps> = ({ isOpen, onClose, onSuccess 
     }));
   };
 
-  const addGenre = () => {
-    if (genreInput.trim() && !formData.genres.includes(genreInput.trim())) {
-      setFormData(prev => ({
-        ...prev,
-        genres: [...prev.genres, genreInput.trim()]
-      }));
-      setGenreInput('');
-    }
-  };
-
-  const removeGenre = (index: number) => {
+  const toggleGenre = (genre: string) => {
     setFormData(prev => ({
       ...prev,
-      genres: prev.genres.filter((_, i) => i !== index)
+      genres: prev.genres.includes(genre)
+        ? prev.genres.filter(g => g !== genre)
+        : [...prev.genres, genre]
     }));
   };
 
@@ -395,40 +398,35 @@ const AddSongModal: React.FC<AddSongModalProps> = ({ isOpen, onClose, onSuccess 
 
           {/* 장르 */}
           <div>
-            <label className="block text-sm font-medium mb-1">장르</label>
-            <div className="flex gap-2 mb-2">
-              <input
-                type="text"
-                value={genreInput}
-                onChange={(e) => setGenreInput(e.target.value)}
-                className="flex-1 p-2 border rounded"
-                placeholder="장르 입력"
-              />
-              <button
-                type="button"
-                onClick={addGenre}
-                className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-              >
-                추가
-              </button>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {formData.genres.map((genre, index) => (
-                <span
-                  key={index}
-                  className="px-2 py-1 bg-gray-200 rounded flex items-center gap-1"
-                >
-                  {genre}
-                  <button
-                    type="button"
-                    onClick={() => removeGenre(index)}
-                    className="text-red-500 hover:text-red-700"
-                  >
-                    ×
-                  </button>
-                </span>
+            <label className="block text-sm font-medium mb-1">장르 (여러 개 선택 가능)</label>
+            <div className="grid grid-cols-3 gap-3">
+              {predefinedGenres.map((genre) => (
+                <label key={genre} className="flex items-center space-x-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={formData.genres.includes(genre)}
+                    onChange={() => toggleGenre(genre)}
+                    className="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 dark:bg-gray-700"
+                  />
+                  <span className="text-sm text-gray-900 dark:text-gray-100">{genre}</span>
+                </label>
               ))}
             </div>
+            {formData.genres.length > 0 && (
+              <div className="mt-3">
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">선택된 장르:</p>
+                <div className="flex flex-wrap gap-2">
+                  {formData.genres.map((genre, index) => (
+                    <span
+                      key={index}
+                      className="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded text-sm"
+                    >
+                      {genre}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* 난이도 추가 */}

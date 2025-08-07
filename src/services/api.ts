@@ -1,4 +1,4 @@
-import { ChartMetaResponse, TierPart, TierResponse, NewSongDto, SongIdxWithTypeDto, NewChartDto, UpdateChartDto } from '@/types/api';
+import { ChartMetaResponse, TierPart, TierResponse, NewSongDto, SongIdxWithTypeDto, NewChartDto, UpdateChartDto, VersionResponse } from '@/types/api';
 import { authService } from './auth';
 
 class ApiService {
@@ -96,9 +96,11 @@ class ApiService {
     const token = authService.getToken();
     const formData = new FormData();
     
-    // JSON 데이터를 문자열로 변환하여 추가
+    // 백엔드 스펙에 맞게 데이터 추가
+    // songIdx와 type은 body로 전송
     formData.append('songIdx', songIdxWithType.songIdx);
     formData.append('type', songIdxWithType.type);
+    // 파일은 'image' 필드명으로 전송
     formData.append('image', file);
 
     const headers: Record<string, string> = {};
@@ -128,6 +130,16 @@ class ApiService {
     await this.makeRequest<void>('/admin/chart', {
       method: 'PUT',
       body: JSON.stringify(chartData),
+    });
+  }
+
+  async getChartVersion(): Promise<VersionResponse> {
+    return this.makeRequest<VersionResponse>('/chart/version');
+  }
+
+  async updateChartVersion(version: string): Promise<void> {
+    await this.makeRequest<void>(`/chart/version?version=${encodeURIComponent(version)}`, {
+      method: 'PUT',
     });
   }
 }

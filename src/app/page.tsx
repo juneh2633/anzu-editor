@@ -7,6 +7,7 @@ import AddSongModal from '@/components/AddSongModal';
 import AddJacketModal from '@/components/AddJacketModal';
 import AddChartToSongModal from '@/components/AddChartToSongModal';
 import EditChartModal from '@/components/EditChartModal';
+import VersionManager from '@/components/VersionManager';
 import { authService } from '@/services/auth';
 
 export default function Home() {
@@ -16,6 +17,7 @@ export default function Home() {
   const [showAddJacketModal, setShowAddJacketModal] = useState(false);
   const [showAddChartModal, setShowAddChartModal] = useState(false);
   const [showEditChartModal, setShowEditChartModal] = useState(false);
+  const [showVersionManager, setShowVersionManager] = useState(false);
 
   useEffect(() => {
     setIsLoggedIn(authService.isLoggedIn());
@@ -51,13 +53,13 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <header className="bg-white shadow-sm border-b">
+    <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
+      <header className="bg-white dark:bg-gray-800 shadow-sm border-b dark:border-gray-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
-            <h1 className="text-3xl font-bold text-gray-900">Tier Part Editor</h1>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Tier Part Editor</h1>
             <div className="flex items-center space-x-4">
-              <p className="text-sm text-gray-500">Anzuinfo Development Tool</p>
+              <p className="text-sm text-gray-500 dark:text-gray-300">Anzuinfo Development Tool</p>
               {isLoggedIn && (
                 <>
                   <button
@@ -84,6 +86,12 @@ export default function Home() {
                   >
                     차트 수정
                   </button>
+                  <button
+                    onClick={() => setShowVersionManager(true)}
+                    className="bg-teal-500 text-white px-4 py-2 rounded-md hover:bg-teal-600"
+                  >
+                    버전 관리
+                  </button>
                 </>
               )}
               {isLoggedIn ? (
@@ -107,13 +115,27 @@ export default function Home() {
       </header>
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {isLoggedIn ? (
-          <TierEditor />
+          showVersionManager ? (
+            <div>
+              <VersionManager />
+              <div className="mt-4 text-center">
+                <button
+                  onClick={() => setShowVersionManager(false)}
+                  className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md font-medium transition-colors"
+                >
+                  Tier Editor로 돌아가기
+                </button>
+              </div>
+            </div>
+          ) : (
+            <TierEditor />
+          )
         ) : (
           <div className="text-center py-12">
-            <h2 className="text-2xl font-semibold text-gray-700 mb-4">
+            <h2 className="text-2xl font-semibold text-gray-700 dark:text-gray-200 mb-4">
               로그인이 필요합니다
             </h2>
-            <p className="text-gray-500 mb-6">
+            <p className="text-gray-500 dark:text-gray-400 mb-6">
               Tier Editor를 사용하려면 먼저 로그인해주세요.
             </p>
             <button
