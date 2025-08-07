@@ -1,0 +1,160 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { TierEditor } from '@/components/TierEditor';
+import LoginModal from '@/components/LoginModal';
+import AddSongModal from '@/components/AddSongModal';
+import AddJacketModal from '@/components/AddJacketModal';
+import AddChartToSongModal from '@/components/AddChartToSongModal';
+import EditChartModal from '@/components/EditChartModal';
+import { authService } from '@/services/auth';
+
+export default function Home() {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showAddSongModal, setShowAddSongModal] = useState(false);
+  const [showAddJacketModal, setShowAddJacketModal] = useState(false);
+  const [showAddChartModal, setShowAddChartModal] = useState(false);
+  const [showEditChartModal, setShowEditChartModal] = useState(false);
+
+  useEffect(() => {
+    setIsLoggedIn(authService.isLoggedIn());
+  }, []);
+
+  const handleLoginSuccess = () => {
+    setIsLoggedIn(true);
+  };
+
+  const handleLogout = () => {
+    authService.logout();
+    setIsLoggedIn(false);
+  };
+
+  const handleSongAddSuccess = () => {
+    // 곡 추가 성공 시 필요한 작업 (예: 데이터 새로고침)
+    console.log('곡이 성공적으로 추가되었습니다.');
+  };
+
+  const handleJacketAddSuccess = () => {
+    // 자켓 업로드 성공 시 필요한 작업
+    console.log('자켓이 성공적으로 업로드되었습니다.');
+  };
+
+  const handleChartAddSuccess = () => {
+    // 차트 추가 성공 시 필요한 작업
+    console.log('차트가 성공적으로 추가되었습니다.');
+  };
+
+  const handleChartEditSuccess = () => {
+    // 차트 수정 성공 시 필요한 작업
+    console.log('차트가 성공적으로 수정되었습니다.');
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-100">
+      <header className="bg-white shadow-sm border-b">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center py-6">
+            <h1 className="text-3xl font-bold text-gray-900">Tier Part Editor</h1>
+            <div className="flex items-center space-x-4">
+              <p className="text-sm text-gray-500">Anzuinfo Development Tool</p>
+              {isLoggedIn && (
+                <>
+                  <button
+                    onClick={() => setShowAddSongModal(true)}
+                    className="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600"
+                  >
+                    곡 추가
+                  </button>
+                  <button
+                    onClick={() => setShowAddJacketModal(true)}
+                    className="bg-purple-500 text-white px-4 py-2 rounded-md hover:bg-purple-600"
+                  >
+                    자켓 업로드
+                  </button>
+                  <button
+                    onClick={() => setShowAddChartModal(true)}
+                    className="bg-orange-500 text-white px-4 py-2 rounded-md hover:bg-orange-600"
+                  >
+                    차트 추가
+                  </button>
+                  <button
+                    onClick={() => setShowEditChartModal(true)}
+                    className="bg-indigo-500 text-white px-4 py-2 rounded-md hover:bg-indigo-600"
+                  >
+                    차트 수정
+                  </button>
+                </>
+              )}
+              {isLoggedIn ? (
+                <button
+                  onClick={handleLogout}
+                  className="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600"
+                >
+                  로그아웃
+                </button>
+              ) : (
+                <button
+                  onClick={() => setShowLoginModal(true)}
+                  className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600"
+                >
+                  로그인
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      </header>
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {isLoggedIn ? (
+          <TierEditor />
+        ) : (
+          <div className="text-center py-12">
+            <h2 className="text-2xl font-semibold text-gray-700 mb-4">
+              로그인이 필요합니다
+            </h2>
+            <p className="text-gray-500 mb-6">
+              Tier Editor를 사용하려면 먼저 로그인해주세요.
+            </p>
+            <button
+              onClick={() => setShowLoginModal(true)}
+              className="bg-blue-500 text-white px-6 py-3 rounded-md hover:bg-blue-600"
+            >
+              로그인하기
+            </button>
+          </div>
+        )}
+      </main>
+      
+      <LoginModal
+        isOpen={showLoginModal}
+        onClose={() => setShowLoginModal(false)}
+        onLoginSuccess={handleLoginSuccess}
+      />
+      
+      <AddSongModal
+        isOpen={showAddSongModal}
+        onClose={() => setShowAddSongModal(false)}
+        onSuccess={handleSongAddSuccess}
+      />
+      
+      <AddJacketModal
+        isOpen={showAddJacketModal}
+        onClose={() => setShowAddJacketModal(false)}
+        onSuccess={handleJacketAddSuccess}
+      />
+      
+      <AddChartToSongModal
+        isOpen={showAddChartModal}
+        onClose={() => setShowAddChartModal(false)}
+        onSuccess={handleChartAddSuccess}
+      />
+      
+      <EditChartModal
+        isOpen={showEditChartModal}
+        onClose={() => setShowEditChartModal(false)}
+        onSuccess={handleChartEditSuccess}
+      />
+    </div>
+  );
+}
