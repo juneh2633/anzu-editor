@@ -3,7 +3,7 @@ export const API_CONFIG = {
     baseUrl: 'https://juneh2633.ddns.net',
   },
   production: {
-    baseUrl: 'http://localhost:3000',
+    baseUrl: '', // 상대경로 사용 (현재 도메인)
   },
 };
 
