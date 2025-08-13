@@ -1,8 +1,12 @@
 import { ChartMetaResponse, TierPart, TierResponse, NewSongDto, SongIdxWithTypeDto, NewChartDto, UpdateChartDto, VersionResponse } from '@/types/api';
 import { authService } from './auth';
+import { getNextjsApiUrl } from '@/config/api';
 
 class ApiService {
-  private baseURL = '/api'; // Use our Next.js API routes
+  private getBaseURL(): string {
+    // Next.js API 경로 사용 (basePath 포함)
+    return getNextjsApiUrl();
+  }
 
   private async makeRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const token = authService.getToken();
@@ -15,7 +19,7 @@ class ApiService {
       headers['Authorization'] = `Bearer ${token}`;
     }
 
-    const response = await fetch(`${this.baseURL}${endpoint}`, {
+    const response = await fetch(`${this.getBaseURL()}${endpoint}`, {
       ...options,
       headers,
     });
@@ -108,7 +112,7 @@ class ApiService {
       headers['Authorization'] = `Bearer ${token}`;
     }
 
-    const response = await fetch(`${this.baseURL}/admin/jacket`, {
+    const response = await fetch(`${this.getBaseURL()}/admin/jacket`, {
       method: 'POST',
       headers,
       body: formData,

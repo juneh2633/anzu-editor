@@ -3,7 +3,7 @@ export const API_CONFIG = {
     baseUrl: 'https://juneh2633.ddns.net',
   },
   production: {
-    baseUrl: 'https://juneh2633.ddns.net', // 상대경로 사용 (현재 도메인)
+    baseUrl: 'https://juneh2633.ddns.net', // NestJS 서버 (직접 API 호출용)
   },
 };
 
@@ -18,6 +18,18 @@ export const getApiBaseUrl = () => {
   }
   
   return API_CONFIG[environment as keyof typeof API_CONFIG]?.baseUrl || API_CONFIG.development.baseUrl;
+};
+
+// Next.js API 경로를 위한 설정 (basePath 고려)
+export const getNextjsApiUrl = () => {
+  if (typeof window !== 'undefined') {
+    // 클라이언트에서 Next.js API 호출 (basePath 포함)
+    const basePath = '/homepage';
+    return `${window.location.origin}${basePath}/api`;
+  }
+  
+  // 서버사이드에서는 상대경로 사용
+  return '/api';
 };
 
 // NestJS 서버의 직접 API 경로를 위한 설정
