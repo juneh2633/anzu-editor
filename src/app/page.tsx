@@ -12,6 +12,7 @@ import { authService } from '@/services/auth';
 
 export default function Home() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showAddSongModal, setShowAddSongModal] = useState(false);
   const [showAddJacketModal, setShowAddJacketModal] = useState(false);
@@ -20,16 +21,51 @@ export default function Home() {
   const [showVersionManager, setShowVersionManager] = useState(false);
 
   useEffect(() => {
-    setIsLoggedIn(authService.isLoggedIn());
+    const checkAuthStatus = async () => {
+      const loggedIn = authService.isLoggedIn();
+      console.log('로그인 상태 확인:', loggedIn);
+      setIsLoggedIn(loggedIn);
+      
+      if (loggedIn) {
+        // 로그인된 경우 사용자 정보를 가져와서 관리자 권한 확인
+        console.log('사용자 정보 가져오기 시작...');
+        try {
+          const userInfo = await authService.getUserInfo();
+          console.log('받아온 사용자 정보:', userInfo);
+          setIsAdmin(userInfo?.rankIdx === 2);
+          console.log('관리자 권한 설정:', userInfo?.rankIdx === 2);
+        } catch (error) {
+          console.error('사용자 정보 가져오기 실패:', error);
+          setIsAdmin(false);
+        }
+      } else {
+        console.log('로그인되지 않음, 관리자 권한 false');
+        setIsAdmin(false);
+      }
+    };
+
+    checkAuthStatus();
   }, []);
 
-  const handleLoginSuccess = () => {
+  const handleLoginSuccess = async () => {
+    console.log('로그인 성공 처리 시작...');
     setIsLoggedIn(true);
+    // 로그인 성공 후 사용자 정보를 가져와서 관리자 권한 확인
+    try {
+      const userInfo = await authService.getUserInfo();
+      console.log('로그인 후 사용자 정보:', userInfo);
+      setIsAdmin(userInfo?.rankIdx === 2);
+      console.log('로그인 후 관리자 권한 설정:', userInfo?.rankIdx === 2);
+    } catch (error) {
+      console.error('로그인 후 사용자 정보 가져오기 실패:', error);
+      setIsAdmin(false);
+    }
   };
 
   const handleLogout = () => {
     authService.logout();
     setIsLoggedIn(false);
+    setIsAdmin(false);
   };
 
   const handleSongAddSuccess = () => {
@@ -60,7 +96,7 @@ export default function Home() {
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Tier Part Editor</h1>
             <div className="flex items-center space-x-4">
               <p className="text-sm text-gray-500 dark:text-gray-300">Anzuinfo Development Tool</p>
-              {isLoggedIn && (
+              {isLoggedIn && isAdmin && (
                 <>
                   <button
                     onClick={() => setShowAddSongModal(true)}
@@ -95,12 +131,17 @@ export default function Home() {
                 </>
               )}
               {isLoggedIn ? (
-                <button
-                  onClick={handleLogout}
-                  className="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600"
-                >
-                  로그아웃
-                </button>
+                <div className="flex items-center space-x-2">
+                  <span className="text-sm text-gray-600 dark:text-gray-300">
+                    {isAdmin ? '관리자' : '일반 사용자'}
+                  </span>
+                  <button
+                    onClick={handleLogout}
+                    className="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600"
+                  >
+                    로그아웃
+                  </button>
+                </div>
               ) : (
                 <button
                   onClick={() => setShowLoginModal(true)}
@@ -154,29 +195,33 @@ export default function Home() {
         onLoginSuccess={handleLoginSuccess}
       />
       
-      <AddSongModal
-        isOpen={showAddSongModal}
-        onClose={() => setShowAddSongModal(false)}
-        onSuccess={handleSongAddSuccess}
-      />
-      
-      <AddJacketModal
-        isOpen={showAddJacketModal}
-        onClose={() => setShowAddJacketModal(false)}
-        onSuccess={handleJacketAddSuccess}
-      />
-      
-      <AddChartToSongModal
-        isOpen={showAddChartModal}
-        onClose={() => setShowAddChartModal(false)}
-        onSuccess={handleChartAddSuccess}
-      />
-      
-      <EditChartModal
-        isOpen={showEditChartModal}
-        onClose={() => setShowEditChartModal(false)}
-        onSuccess={handleChartEditSuccess}
-      />
+      {isAdmin && (
+        <>
+          <AddSongModal
+            isOpen={showAddSongModal}
+            onClose={() => setShowAddSongModal(false)}
+            onSuccess={handleSongAddSuccess}
+          />
+          
+          <AddJacketModal
+            isOpen={showAddJacketModal}
+            onClose={() => setShowAddJacketModal(false)}
+            onSuccess={handleJacketAddSuccess}
+          />
+          
+          <AddChartToSongModal
+            isOpen={showAddChartModal}
+            onClose={() => setShowAddChartModal(false)}
+            onSuccess={handleChartAddSuccess}
+          />
+          
+          <EditChartModal
+            isOpen={showEditChartModal}
+            onClose={() => setShowEditChartModal(false)}
+            onSuccess={handleChartEditSuccess}
+          />
+        </>
+      )}
     </div>
   );
 }

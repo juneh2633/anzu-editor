@@ -124,6 +124,14 @@ export interface LoginErrorResponse {
   message: string;
 }
 
+export interface UserInfo {
+  id: string;
+  username: string;
+  role: string;
+  rankIdx: number;
+  isAdmin: boolean;
+}
+
 // 곡 추가를 위한 타입들
 export enum ChartTypeCode {
   novice = 'novice',
