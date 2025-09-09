@@ -23,8 +23,10 @@ export const getApiBaseUrl = () => {
 // Next.js API 경로를 위한 설정 (basePath 고려)
 export const getNextjsApiUrl = () => {
   if (typeof window !== 'undefined') {
-    // 클라이언트에서 Next.js API 호출 (basePath 포함)
-    const basePath = '/homepage';
+    // 클라이언트에서 Next.js API 호출
+    // 개발 환경에서는 basePath 없음, 프로덕션에서만 basePath 적용
+    const isProduction = process.env.NODE_ENV === 'production';
+    const basePath = isProduction ? '/homepage' : '';
     return `${window.location.origin}${basePath}/api`;
   }
   
@@ -44,6 +46,6 @@ export const getNestjsApiUrl = () => {
     }
   }
   
-  // 개발: 외부 도메인 또는 localhost:3000
-  return API_CONFIG[environment as keyof typeof API_CONFIG]?.baseUrl || 'http://localhost:3000';
+  // 개발: 외부 도메인 사용
+  return API_CONFIG[environment as keyof typeof API_CONFIG]?.baseUrl || 'https://juneh2633.ddns.net';
 }; 

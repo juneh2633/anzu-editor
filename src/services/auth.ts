@@ -1,10 +1,12 @@
 import { LoginRequest, LoginResponse, LoginErrorResponse, UserInfo } from '@/types/api';
-import { getApiBaseUrl } from '@/config/api';
+import { getNestjsApiUrl } from '@/config/api';
 
 class AuthService {
-  private baseURL = getApiBaseUrl();
+  private baseURL = getNestjsApiUrl();
 
   async login(credentials: LoginRequest): Promise<LoginResponse> {
+    console.log('로그인 API 호출:', `${this.baseURL}/auth/login`);
+    
     const response = await fetch(`${this.baseURL}/auth/login`, {
       method: 'POST',
       headers: {
@@ -14,17 +16,45 @@ class AuthService {
       body: JSON.stringify(credentials),
     });
 
+    console.log('로그인 API 응답 상태:', response.status, response.statusText);
+
     if (!response.ok) {
-      const errorData: LoginErrorResponse = await response.json();
-      throw new Error(errorData.message || 'Login failed');
+      // 응답이 JSON인지 확인
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        try {
+          const errorData: LoginErrorResponse = await response.json();
+          throw new Error(errorData.message || 'Login failed');
+        } catch (jsonError) {
+          throw new Error(`로그인 실패 (${response.status}): JSON 파싱 오류`);
+        }
+      } else {
+        // HTML 응답인 경우
+        const htmlText = await response.text();
+        console.error('HTML 응답 받음:', htmlText.substring(0, 200));
+        throw new Error(`로그인 실패 (${response.status}): 서버에서 HTML 응답을 반환했습니다. API 서버가 실행 중인지 확인해주세요.`);
+      }
     }
 
-    const data: LoginResponse = await response.json();
-    
-    // 토큰을 로컬 스토리지에 저장
-    localStorage.setItem('accessToken', data.accessToken);
-    
-    return data;
+    // 응답이 JSON인지 확인
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      const htmlText = await response.text();
+      console.error('예상치 못한 응답 형식:', htmlText.substring(0, 200));
+      throw new Error('서버에서 JSON이 아닌 응답을 반환했습니다.');
+    }
+
+    try {
+      const data: LoginResponse = await response.json();
+      
+      // 토큰을 로컬 스토리지에 저장
+      localStorage.setItem('accessToken', data.accessToken);
+      
+      return data;
+    } catch (jsonError) {
+      console.error('JSON 파싱 오류:', jsonError);
+      throw new Error('로그인 응답을 처리하는 중 오류가 발생했습니다.');
+    }
   }
 
   async getUserInfo(): Promise<UserInfo | null> {
