@@ -25,6 +25,7 @@ interface TierSectionProps {
   onUpdateChart: (chartIdx: number, updates: Partial<ChartListItem>) => void;
   onRemoveChart: (chartIdx: number) => void;
   onReorderCharts: (oldIndex: number, newIndex: number) => void;
+  onAddChart?: (tierIdx: number) => void;
   onRemoveTier?: () => void;
   onRenameTier?: (newName: string) => void;
   enableDndContext?: boolean;
@@ -37,6 +38,7 @@ export function TierSection({
   onUpdateChart, 
   onRemoveChart, 
   onReorderCharts,
+  onAddChart,
   onRemoveTier,
   onRenameTier,
   enableDndContext = true
@@ -202,6 +204,21 @@ export function TierSection({
                 />
               );
             })}
+            
+            {/* 차트 추가 버튼 */}
+            {onAddChart && (
+              <button
+                onClick={() => onAddChart(tier.tierIdx)}
+                className="w-full p-4 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg text-slate-600 dark:text-slate-400 hover:border-blue-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+              >
+                <div className="flex items-center justify-center space-x-2">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  </svg>
+                  <span>차트 추가</span>
+                </div>
+              </button>
+            )}
           </div>
         </SortableContext>
       )}

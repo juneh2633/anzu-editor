@@ -1,330 +1,221 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
-import { ChartMetaResponse, SongData, ChartData, TierItem } from '@/types/api';
+import React, { useState, useEffect } from 'react';
+import { ChartMetaResponse, SongData, ChartData } from '@/types/api';
 import { getDifficultyColor } from '@/utils/colors';
 
 interface AddChartToTierModalProps {
-  chartMeta: ChartMetaResponse;
-  tierList: TierItem[];
-  onAddToTier: (tierIdx: number, chartIdx: number, targetScore: number | null) => void;
-  onAddMultipleToTier: (tierIdx: number, charts: { chartIdx: number; targetScore: number | null }[]) => void;
+  isOpen: boolean;
   onClose: () => void;
+  onAdd: (chartIdx: number) => void;
+  chartMeta: ChartMetaResponse;
 }
 
-export function AddChartToTierModal({
-  chartMeta,
-  tierList,
-  onAddToTier,
-  onAddMultipleToTier,
-  onClose
-}: AddChartToTierModalProps) {
+const AddChartToTierModal: React.FC<AddChartToTierModalProps> = ({ 
+  isOpen, 
+  onClose, 
+  onAdd, 
+  chartMeta 
+}) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCharts, setSelectedCharts] = useState<Set<number>>(new Set());
-  const [selectedTierIdx, setSelectedTierIdx] = useState<number>(tierList[0]?.tierIdx || 1);
-  const [defaultScore, setDefaultScore] = useState<number | null>(null);
-  const [levelRange, setLevelRange] = useState({ min: 1, max: 20 });
-  const [visibleCount, setVisibleCount] = useState(50); // Show only first 50 items initially
+  const [selectedSong, setSelectedSong] = useState<SongData | null>(null);
+  const [selectedChart, setSelectedChart] = useState<ChartData | null>(null);
+  const [filteredSongs, setFilteredSongs] = useState<SongData[]>([]);
 
-  // Reset visible count when search/filter changes
   useEffect(() => {
-    setVisibleCount(50);
-  }, [searchTerm, levelRange]);
-
-  const existingCharts = useMemo(() => {
-    const set = new Set<number>();
-    tierList.forEach(tier => {
-      tier.chartList.forEach(chart => set.add(chart.chartIdx));
-    });
-    return set;
-  }, [tierList]);
-
-  const availableCharts = useMemo(() => {
-    const charts: Array<{ song: SongData; chart: ChartData }> = [];
-
-    chartMeta.chartData.forEach(song => {
-      song.chart.forEach(chart => {
-        charts.push({ song, chart });
-      });
-    });
-
-    return charts;
+    if (chartMeta?.songs) {
+      setFilteredSongs(chartMeta.songs);
+    }
   }, [chartMeta]);
 
-  const filteredCharts = useMemo(() => {
-    return availableCharts.filter(({ song, chart }) => {
-      // Search term filter
-      const searchLower = searchTerm.toLowerCase();
-      const matchesSearch = !searchTerm || 
-        song.title.toLowerCase().includes(searchLower) ||
-        song.artist.toLowerCase().includes(searchLower) ||
-        song.asciiTitle.toLowerCase().includes(searchLower) ||
-        song.asciiArtist.toLowerCase().includes(searchLower);
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!chartMeta?.songs) return;
 
-      // Level range filter
-      const matchesLevel = chart.level >= levelRange.min && chart.level <= levelRange.max;
-
-      // Type filter (always true for now)
-      const matchesType = true;
-
-      return matchesSearch && matchesLevel && matchesType;
-    });
-  }, [availableCharts, searchTerm, levelRange]);
-
-  const handleChartToggle = (chartIdx: number) => {
-    const newSelected = new Set(selectedCharts);
-    if (newSelected.has(chartIdx)) {
-      newSelected.delete(chartIdx);
-    } else {
-      newSelected.add(chartIdx);
-    }
-    setSelectedCharts(newSelected);
+    const searchLower = searchTerm.toLowerCase();
+    const filtered = chartMeta.songs.filter(song => 
+      song.title.toLowerCase().includes(searchLower) ||
+      song.artist.toLowerCase().includes(searchLower) ||
+      song.songid.toLowerCase().includes(searchLower) ||
+      song.songIdx.toString().includes(searchTerm)
+    );
+    setFilteredSongs(filtered);
   };
 
-  const handleAddSelected = () => {
-    const chartsToAdd = Array.from(selectedCharts).map(chartIdx => ({
-      chartIdx,
-      targetScore: defaultScore
-    }));
-    
-    if (chartsToAdd.length === 1) {
-      onAddToTier(selectedTierIdx, chartsToAdd[0].chartIdx, chartsToAdd[0].targetScore);
-    } else {
-      onAddMultipleToTier(selectedTierIdx, chartsToAdd);
+  const handleSongSelect = (song: SongData) => {
+    setSelectedSong(song);
+    setSelectedChart(null);
+  };
+
+  const handleChartSelect = (chart: ChartData) => {
+    setSelectedChart(chart);
+  };
+
+  const handleAdd = () => {
+    if (selectedChart) {
+      onAdd(selectedChart.chartIdx);
+      onClose();
     }
+  };
+
+  const resetModal = () => {
+    setSearchTerm('');
+    setSelectedSong(null);
+    setSelectedChart(null);
+    if (chartMeta?.songs) {
+      setFilteredSongs(chartMeta.songs);
+    }
+  };
+
+  const handleClose = () => {
+    resetModal();
     onClose();
   };
 
-
-  const visibleCharts = useMemo(() => {
-    return filteredCharts.slice(0, visibleCount);
-  }, [filteredCharts, visibleCount]);
-
-  const loadMore = () => {
-    setVisibleCount(prev => Math.min(prev + 50, filteredCharts.length));
-  };
-
-  // LazyImage component with loading states
-  const LazyImage = ({ src, alt, className, style }: { src: string; alt: string; className: string; style?: React.CSSProperties }) => {
-    const [loaded, setLoaded] = useState(false);
-    const [error, setError] = useState(false);
-
-    return (
-      <div className="relative w-full h-full" style={style}>
-        {!loaded && !error && (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="animate-pulse">
-              <div className="w-10 h-10 bg-gray-300 rounded"></div>
-            </div>
-          </div>
-        )}
-        {error ? (
-          <div className="absolute inset-0 flex items-center justify-center text-xs text-gray-500">
-            No Image
-          </div>
-        ) : (
-          <img
-            src={src}
-            alt={alt}
-            className={`${className} transition-opacity duration-200 ${loaded ? 'opacity-100' : 'opacity-0'}`}
-            onLoad={() => setLoaded(true)}
-            onError={() => setError(true)}
-            loading="lazy"
-          />
-        )}
-      </div>
-    );
-  };
+  if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-hidden">
-        <div className="p-6 border-b">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold text-gray-900">Add Charts to Tier</h2>
-            <button
-              onClick={onClose}
-              className="text-gray-400 hover:text-gray-600"
-            >
-              <svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-              </svg>
-            </button>
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl p-8 w-full max-w-4xl shadow-2xl border border-slate-200/50 dark:border-slate-700/50 max-h-[90vh] overflow-hidden flex flex-col">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">차트 추가</h2>
+            <p className="text-slate-600 dark:text-slate-400 mt-1">티어에 추가할 차트를 선택하세요</p>
           </div>
-
-          {/* Search and Filters */}
-          <div className="space-y-4">
-            <div>
-              <input
-                type="text"
-                placeholder="Search by song title or artist..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-800"
-              />
-            </div>
-
-            <div className="flex flex-wrap gap-4">
-              {/* Target Tier */}
-              <div className="flex items-center gap-2">
-                <label className="text-sm font-medium text-gray-800">Target Tier:</label>
-                <select
-                  value={selectedTierIdx}
-                  onChange={(e) => setSelectedTierIdx(parseInt(e.target.value))}
-                  className="px-2 py-1 text-sm border rounded text-gray-800"
-                >
-                  {tierList.map((tier, index) => (
-                    <option key={`tier-${tier.tierIdx}-${index}`} value={tier.tierIdx}>
-                      Tier {tier.tier}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Level Range */}
-              <div className="flex items-center gap-2">
-                <label className="text-sm font-medium text-gray-800">Level:</label>
-                <input
-                  type="number"
-                  value={levelRange.min}
-                  onChange={(e) => setLevelRange(prev => ({ ...prev, min: parseInt(e.target.value) || 1 }))}
-                  className="w-16 px-2 py-1 text-sm border rounded text-gray-800"
-                  min="1"
-                  max="20"
-                />
-                <span className="text-sm text-gray-800">-</span>
-                <input
-                  type="number"
-                  value={levelRange.max}
-                  onChange={(e) => setLevelRange(prev => ({ ...prev, max: parseInt(e.target.value) || 20 }))}
-                  className="w-16 px-2 py-1 text-sm border rounded text-gray-800"
-                  min="1"
-                  max="20"
-                />
-              </div>
-
-              {/* Default Score */}
-              <div className="flex items-center gap-2">
-                <label className="text-sm font-medium text-gray-800">Default Score:</label>
-                <input
-                  type="number"
-                  value={defaultScore || ''}
-                  onChange={(e) => setDefaultScore(e.target.value ? parseInt(e.target.value) : null)}
-                  className="w-24 px-2 py-1 text-sm border rounded text-gray-800 placeholder-gray-500"
-                  min="0"
-                  max="10000000"
-                  placeholder="None"
-                />
-              </div>
-            </div>
-          </div>
+          <button
+            onClick={handleClose}
+            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
 
-        {/* Chart List */}
-        <div className="flex-1 overflow-y-auto p-6 max-h-96">
-          <div className="text-sm text-gray-600 mb-4">
-            Showing {visibleCharts.length} of {filteredCharts.length} filtered charts ({availableCharts.length} total available)
-            {selectedCharts.size > 0 && (
-              <span className="ml-4 text-blue-600">
-                {selectedCharts.size} selected
-              </span>
-            )}
+        {/* 검색 폼 */}
+        <form onSubmit={handleSearch} className="mb-6">
+          <div className="flex gap-4">
+            <div className="flex-1">
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="곡 제목, 아티스트, Song ID 또는 Song Index로 검색하세요"
+                className="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-slate-800 dark:text-slate-100"
+              />
+            </div>
+            <button
+              type="submit"
+              className="inline-flex items-center px-6 py-3 text-sm font-medium text-white bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 rounded-xl shadow-sm transition-all duration-200 hover:shadow-md"
+            >
+              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              검색
+            </button>
           </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {visibleCharts.map(({ song, chart }) => {
-              const difficultyColor = getDifficultyColor(chart.type, chartMeta.metaData.type);
-              const isSelected = selectedCharts.has(chart.chartIdx);
-              
-              return (
+        </form>
+
+        <div className="flex-1 overflow-hidden flex gap-6">
+          {/* 곡 목록 */}
+          <div className="flex-1 overflow-y-auto">
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">
+              곡 목록 ({filteredSongs.length}개)
+            </h3>
+            <div className="space-y-2">
+              {filteredSongs.map((song) => (
                 <div
-                  key={chart.chartIdx}
-                  onClick={() => handleChartToggle(chart.chartIdx)}
-                  className={`border rounded-lg p-3 cursor-pointer transition-all ${
-                    isSelected 
-                      ? 'border-blue-500 bg-blue-50 shadow-md' 
-                      : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'
+                  key={song.songIdx}
+                  onClick={() => handleSongSelect(song)}
+                  className={`p-4 rounded-xl border cursor-pointer transition-colors ${
+                    selectedSong?.songIdx === song.songIdx
+                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                      : 'border-slate-200 dark:border-slate-700 hover:border-blue-300 dark:hover:border-blue-700'
                   }`}
                 >
-                  <div className="flex items-center gap-3">
-                    <div 
-                      className="w-12 h-12 rounded border-2 bg-gray-200 flex-shrink-0 overflow-hidden relative"
-                      style={{ borderColor: difficultyColor }}
-                    >
-                      <LazyImage
-                        src={chart.jacket}
-                        alt={song.title}
-                        className="w-full h-full object-cover"
-                      />
+                  <div className="flex items-center space-x-3">
+                    <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                      <span className="text-sm font-bold text-white">{song.songIdx}</span>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-medium text-sm text-gray-900 truncate">{song.title}</h4>
-                      <p className="text-xs text-gray-600 truncate">{song.artist}</p>
-                      <div className="flex items-center gap-1 mt-1">
-                        <span 
-                          className="px-1.5 py-0.5 text-xs font-medium rounded"
-                          style={{ 
-                            backgroundColor: difficultyColor + '20',
-                            color: difficultyColor
-                          }}
-                        >
-                          {chart.type.toUpperCase()} {chart.level}
-                        </span>
-                      </div>
+                    <div className="flex-1">
+                      <h4 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+                        {song.title}
+                      </h4>
+                      <p className="text-slate-600 dark:text-slate-400">
+                        {song.artist} • {song.version}
+                      </p>
+                      <p className="text-sm text-slate-500 dark:text-slate-400">
+                        Song ID: {song.songid} • 차트 수: {song.chart.length}
+                      </p>
                     </div>
-                    {isSelected && (
-                      <div className="text-blue-600 flex-shrink-0">
-                        <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                        </svg>
-                      </div>
-                    )}
                   </div>
                 </div>
-              );
-            })}
+              ))}
+            </div>
           </div>
 
-          {visibleCount < filteredCharts.length && (
-            <div className="text-center mt-6">
-              <button
-                onClick={loadMore}
-                className="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded-md text-sm font-medium transition-colors"
-              >
-                Load More ({filteredCharts.length - visibleCount} remaining)
-              </button>
+          {/* 차트 목록 */}
+          {selectedSong && (
+            <div className="flex-1 overflow-y-auto">
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">
+                차트 목록 ({selectedSong.chart.length}개)
+              </h3>
+              <div className="space-y-2">
+                {selectedSong.chart.map((chart) => (
+                  <div
+                    key={chart.chartIdx}
+                    onClick={() => handleChartSelect(chart)}
+                    className={`p-4 rounded-xl border cursor-pointer transition-colors ${
+                      selectedChart?.chartIdx === chart.chartIdx
+                        ? 'border-green-500 bg-green-50 dark:bg-green-900/20'
+                        : 'border-slate-200 dark:border-slate-700 hover:border-green-300 dark:hover:border-green-700'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="flex items-center space-x-2">
+                          <span className={`px-2 py-1 text-xs font-medium rounded ${getDifficultyColor(chart.type)}`}>
+                            {chart.type}
+                          </span>
+                          <span className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                            Lv.{chart.level}
+                          </span>
+                        </div>
+                        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                          Chart ID: {chart.chartIdx}
+                        </p>
+                      </div>
+                      <div className="text-right text-sm text-slate-500 dark:text-slate-400">
+                        <div>Max Score: {chart.maxExscore.toLocaleString()}</div>
+                        <div>Max Chain: {chart.maxChain}</div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>
 
-        {/* Footer */}
-        <div className="p-6 border-t bg-gray-50">
-          <div className="flex justify-between items-center">
-            <div className="text-sm text-gray-600">
-              {selectedCharts.size > 0 ? (
-                <>Will add {selectedCharts.size} chart{selectedCharts.size > 1 ? 's' : ''} to Tier {tierList.find(t => t.tierIdx === selectedTierIdx)?.tier}</>
-              ) : (
-                'Select charts to add to tier'
-              )}
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={onClose}
-                className="px-4 py-2 text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-md transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleAddSelected}
-                disabled={selectedCharts.size === 0}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-md transition-colors"
-              >
-                Add Selected ({selectedCharts.size})
-              </button>
-            </div>
-          </div>
+        {/* 액션 버튼 */}
+        <div className="flex justify-end space-x-4 mt-6 pt-6 border-t border-slate-200 dark:border-slate-700">
+          <button
+            onClick={handleClose}
+            className="px-6 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors"
+          >
+            취소
+          </button>
+          <button
+            onClick={handleAdd}
+            disabled={!selectedChart}
+            className="px-6 py-2 text-sm font-medium text-white bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors"
+          >
+            차트 추가
+          </button>
         </div>
       </div>
     </div>
   );
-}
+};
+
+export default AddChartToTierModal;

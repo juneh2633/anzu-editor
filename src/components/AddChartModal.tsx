@@ -1,27 +1,25 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { UpdateChartDto, ChartMetaResponse, SongData, ChartData, RadarDto } from '@/types/api';
+import { NewChartDto, ChartMetaResponse, SongData, ChartData, RadarDto } from '@/types/api';
 import { apiService } from '@/services/api';
 import { getDifficultyColor } from '@/utils/colors';
 
-interface EditChartModalProps {
+interface AddChartModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess?: () => void;
-  chartIdx?: number;
 }
 
-const EditChartModal: React.FC<EditChartModalProps> = ({ isOpen, onClose, onSuccess, chartIdx: propChartIdx }) => {
+const AddChartModal: React.FC<AddChartModalProps> = ({ isOpen, onClose, onSuccess }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [chartMeta, setChartMeta] = useState<ChartMetaResponse | null>(null);
   const [filteredCharts, setFilteredCharts] = useState<Array<{song: SongData, chart: ChartData}>>([]);
   const [selectedChart, setSelectedChart] = useState<{song: SongData, chart: ChartData} | null>(null);
-  const [chartIdx, setChartIdx] = useState('');
-  const [formData, setFormData] = useState<Omit<UpdateChartDto, 'chartIdx'>>({
+  const [formData, setFormData] = useState<NewChartDto>({
     songIdx: 0,
-    level: 1,
     type: '',
+    level: 1,
     effectorName: '',
     illustratorName: '',
     radar: {
@@ -40,11 +38,8 @@ const EditChartModal: React.FC<EditChartModalProps> = ({ isOpen, onClose, onSucc
   useEffect(() => {
     if (isOpen) {
       loadChartMeta();
-      if (propChartIdx) {
-        loadExistingChartData(propChartIdx);
-      }
     }
-  }, [isOpen, propChartIdx]);
+  }, [isOpen]);
 
   const loadChartMeta = async () => {
     try {
@@ -61,54 +56,6 @@ const EditChartModal: React.FC<EditChartModalProps> = ({ isOpen, onClose, onSucc
       setFilteredCharts(allCharts);
     } catch (err) {
       console.error('차트 메타데이터 로딩 실패:', err);
-    }
-  };
-
-  const loadExistingChartData = async (chartIdx: number) => {
-    try {
-      // 차트 메타데이터에서 해당 차트 찾기
-      if (!chartMeta) {
-        // chartMeta가 아직 로드되지 않았다면 잠시 대기
-        setTimeout(() => loadExistingChartData(chartIdx), 100);
-        return;
-      }
-
-      let foundChart: {song: SongData, chart: ChartData} | null = null;
-      
-      chartMeta.chartData.forEach(song => {
-        song.chart.forEach(chart => {
-          if (chart.chartIdx === chartIdx) {
-            foundChart = { song, chart };
-          }
-        });
-      });
-
-      if (foundChart) {
-        // 기존 차트 데이터로 폼 초기화
-        setSelectedChart(foundChart);
-        setChartIdx(chartIdx.toString());
-        setFormData({
-          songIdx: foundChart.song.songIdx,
-          level: foundChart.chart.level,
-          type: foundChart.chart.type,
-          effectorName: foundChart.chart.effector || '',
-          illustratorName: foundChart.chart.illustrator || '',
-          radar: {
-            notes: foundChart.chart.radar.notes || 0,
-            peak: foundChart.chart.radar.peak || 0,
-            tsumami: foundChart.chart.radar.tsumami || 0,
-            tricky: foundChart.chart.radar.tricky || 0,
-            handtrip: foundChart.chart.radar.handtrip || 0,
-            onehand: foundChart.chart.radar.onehand || 0
-          } as RadarDto
-        });
-      } else {
-        console.error('차트를 찾을 수 없습니다:', chartIdx);
-        setError('차트를 찾을 수 없습니다.');
-      }
-    } catch (err) {
-      console.error('기존 차트 데이터 로딩 실패:', err);
-      setError('기존 차트 데이터를 불러오는데 실패했습니다.');
     }
   };
 
@@ -138,7 +85,6 @@ const EditChartModal: React.FC<EditChartModalProps> = ({ isOpen, onClose, onSucc
 
   const handleChartSelect = (song: SongData, chart: ChartData) => {
     setSelectedChart({ song, chart });
-    setChartIdx(chart.chartIdx.toString());
     setFormData(prev => ({
       ...prev,
       songIdx: song.songIdx,
@@ -162,36 +108,27 @@ const EditChartModal: React.FC<EditChartModalProps> = ({ isOpen, onClose, onSucc
     setIsLoading(true);
     setError('');
 
-    if (!propChartIdx) {
-      setError('차트 ID가 필요합니다.');
-      setIsLoading(false);
-      return;
-    }
-
     try {
-      console.log('차트 수정 시도:', { chartIdx: propChartIdx, formData });
-      await apiService.updateChart(propChartIdx, formData);
-      console.log('차트 수정 API 호출 성공');
+      await apiService.addNewChart(formData);
       
-      // 차트 수정 성공 후 차트 메타데이터 캐시 갱신
+      // 차트 추가 성공 후 차트 메타데이터 캐시 갱신
       await apiService.refreshChartMetaCache();
-      console.log('캐시 갱신 완료');
       
       onSuccess?.();
       onClose();
     } catch (err: any) {
-      console.error('차트 수정 실패:', err);
+      console.error('차트 추가 실패:', err);
       
       if (err.message?.includes('404')) {
         // API가 구현되지 않은 경우에도 성공으로 처리 (개발/테스트 목적)
-        console.log('차트 수정 API가 구현되지 않았지만, 테스트 목적으로 성공 처리');
+        console.log('차트 추가 API가 구현되지 않았지만, 테스트 목적으로 성공 처리');
         onSuccess?.();
         onClose();
         return;
       } else if (err.message?.includes('500')) {
         setError('서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
       } else {
-        setError('차트 수정에 실패했습니다: ' + (err.message || '알 수 없는 오류'));
+        setError('차트 추가에 실패했습니다: ' + (err.message || '알 수 없는 오류'));
       }
     } finally {
       setIsLoading(false);
@@ -205,8 +142,8 @@ const EditChartModal: React.FC<EditChartModalProps> = ({ isOpen, onClose, onSucc
       <div className="bg-white dark:bg-slate-900 rounded-2xl p-8 w-full max-w-2xl shadow-2xl border border-slate-200/50 dark:border-slate-700/50 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">차트 수정</h2>
-            <p className="text-slate-600 dark:text-slate-400 mt-1">기존 차트의 정보를 수정합니다</p>
+            <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">차트 추가</h2>
+            <p className="text-slate-600 dark:text-slate-400 mt-1">새로운 차트를 추가합니다</p>
           </div>
           <button
             onClick={onClose}
@@ -304,19 +241,40 @@ const EditChartModal: React.FC<EditChartModalProps> = ({ isOpen, onClose, onSucc
             </div>
           )}
 
-          {propChartIdx && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                수정할 차트 ID
+                곡 ID (자동 입력)
               </label>
               <input
                 type="number"
-                value={propChartIdx}
+                value={formData.songIdx}
                 disabled
                 className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400"
               />
             </div>
-          )}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                차트 타입 *
+              </label>
+              <select
+                value={formData.type}
+                onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value }))}
+                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-slate-800 dark:text-slate-100"
+                required
+              >
+                <option value="">타입을 선택하세요</option>
+                <option value="NOV">NOV</option>
+                <option value="ADV">ADV</option>
+                <option value="EXH">EXH</option>
+                <option value="MXM">MXM</option>
+                <option value="INF">INF</option>
+                <option value="GRV">GRV</option>
+                <option value="HVN">HVN</option>
+                <option value="VVD">VVD</option>
+              </select>
+            </div>
+          </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
@@ -335,17 +293,6 @@ const EditChartModal: React.FC<EditChartModalProps> = ({ isOpen, onClose, onSucc
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                차트 타입
-              </label>
-              <input
-                type="text"
-                value={formData.type}
-                onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value }))}
-                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-slate-800 dark:text-slate-100"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
                 이펙터 이름
               </label>
               <input
@@ -355,18 +302,17 @@ const EditChartModal: React.FC<EditChartModalProps> = ({ isOpen, onClose, onSucc
                 className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-slate-800 dark:text-slate-100"
               />
             </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-              일러스트레이터 이름
-            </label>
-            <input
-              type="text"
-              value={formData.illustratorName}
-              onChange={(e) => setFormData(prev => ({ ...prev, illustratorName: e.target.value }))}
-              className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-slate-800 dark:text-slate-100"
-            />
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                일러스트레이터 이름
+              </label>
+              <input
+                type="text"
+                value={formData.illustratorName}
+                onChange={(e) => setFormData(prev => ({ ...prev, illustratorName: e.target.value }))}
+                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-slate-800 dark:text-slate-100"
+              />
+            </div>
           </div>
 
           {/* 레이더 차트 섹션 */}
@@ -488,9 +434,9 @@ const EditChartModal: React.FC<EditChartModalProps> = ({ isOpen, onClose, onSucc
             <button
               type="submit"
               disabled={isLoading}
-              className="px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors"
+              className="px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors"
             >
-              {isLoading ? '수정 중...' : '차트 수정'}
+              {isLoading ? '추가 중...' : '차트 추가'}
             </button>
           </div>
         </form>
@@ -499,4 +445,4 @@ const EditChartModal: React.FC<EditChartModalProps> = ({ isOpen, onClose, onSucc
   );
 };
 
-export default EditChartModal;
+export default AddChartModal;

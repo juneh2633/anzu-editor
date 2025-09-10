@@ -3,11 +3,14 @@
 import { useState, useEffect } from 'react';
 import { TierEditor } from '@/components/TierEditor';
 import LoginModal from '@/components/LoginModal';
+import VersionManager from '@/components/VersionManager';
+import StatsDashboard from '@/components/StatsDashboard';
+import ChartSearch from '@/components/ChartSearch';
 import AddSongModal from '@/components/AddSongModal';
 import AddJacketModal from '@/components/AddJacketModal';
-import AddChartToSongModal from '@/components/AddChartToSongModal';
+import AddChartModal from '@/components/AddChartModal';
 import EditChartModal from '@/components/EditChartModal';
-import VersionManager from '@/components/VersionManager';
+import Toast from '@/components/Toast';
 import { authService } from '@/services/auth';
 
 export default function Home() {
@@ -19,6 +22,18 @@ export default function Home() {
   const [showAddChartModal, setShowAddChartModal] = useState(false);
   const [showEditChartModal, setShowEditChartModal] = useState(false);
   const [showVersionManager, setShowVersionManager] = useState(false);
+  const [currentView, setCurrentView] = useState<'tier' | 'stats' | 'search'>('tier');
+  
+  // 토스트 알림 상태
+  const [toast, setToast] = useState<{
+    message: string;
+    type: 'success' | 'error' | 'info';
+    isVisible: boolean;
+  }>({
+    message: '',
+    type: 'info',
+    isVisible: false
+  });
 
   useEffect(() => {
     const checkAuthStatus = async () => {
@@ -68,25 +83,18 @@ export default function Home() {
     setIsAdmin(false);
   };
 
-  const handleSongAddSuccess = () => {
-    // 곡 추가 성공 시 필요한 작업 (예: 데이터 새로고침)
-    console.log('곡이 성공적으로 추가되었습니다.');
+  const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
+    setToast({
+      message,
+      type,
+      isVisible: true
+    });
   };
 
-  const handleJacketAddSuccess = () => {
-    // 자켓 업로드 성공 시 필요한 작업
-    console.log('자켓이 성공적으로 업로드되었습니다.');
+  const hideToast = () => {
+    setToast(prev => ({ ...prev, isVisible: false }));
   };
 
-  const handleChartAddSuccess = () => {
-    // 차트 추가 성공 시 필요한 작업
-    console.log('차트가 성공적으로 추가되었습니다.');
-  };
-
-  const handleChartEditSuccess = () => {
-    // 차트 수정 성공 시 필요한 작업
-    console.log('차트가 성공적으로 수정되었습니다.');
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
@@ -107,7 +115,52 @@ export default function Home() {
               </div>
             </div>
             <div className="flex items-center space-x-3">
-              {isLoggedIn && isAdmin && (
+              {/* 네비게이션 메뉴 */}
+              {isLoggedIn && (
+                <div className="flex items-center space-x-2 mr-4">
+                  <button
+                    onClick={() => setCurrentView('tier')}
+                    className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
+                      currentView === 'tier'
+                        ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300'
+                        : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100'
+                    }`}
+                  >
+                    <svg className="w-4 h-4 mr-2 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
+                    Tier Editor
+                  </button>
+                  <button
+                    onClick={() => setCurrentView('stats')}
+                    className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
+                      currentView === 'stats'
+                        ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300'
+                        : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100'
+                    }`}
+                  >
+                    <svg className="w-4 h-4 mr-2 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
+                    통계
+                  </button>
+                  <button
+                    onClick={() => setCurrentView('search')}
+                    className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
+                      currentView === 'search'
+                        ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300'
+                        : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100'
+                    }`}
+                  >
+                    <svg className="w-4 h-4 mr-2 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                    차트 검색
+                  </button>
+                </div>
+              )}
+              
+              {isLoggedIn && isAdmin && currentView === 'tier' && (
                 <div className="flex items-center space-x-2">
                   <button
                     onClick={() => setShowAddSongModal(true)}
@@ -204,6 +257,10 @@ export default function Home() {
                 </button>
               </div>
             </div>
+          ) : currentView === 'stats' ? (
+            <StatsDashboard />
+          ) : currentView === 'search' ? (
+            <ChartSearch />
           ) : (
             <TierEditor />
           )
@@ -236,28 +293,45 @@ export default function Home() {
           <AddSongModal
             isOpen={showAddSongModal}
             onClose={() => setShowAddSongModal(false)}
-            onSuccess={handleSongAddSuccess}
+            onSuccess={() => {
+              showToast('곡이 성공적으로 추가되었습니다!', 'success');
+            }}
           />
           
           <AddJacketModal
             isOpen={showAddJacketModal}
             onClose={() => setShowAddJacketModal(false)}
-            onSuccess={handleJacketAddSuccess}
+            onSuccess={() => {
+              showToast('자켓이 성공적으로 업로드되었습니다!', 'success');
+            }}
           />
           
-          <AddChartToSongModal
+          <AddChartModal
             isOpen={showAddChartModal}
             onClose={() => setShowAddChartModal(false)}
-            onSuccess={handleChartAddSuccess}
+            onSuccess={() => {
+              showToast('차트가 성공적으로 추가되었습니다!', 'success');
+            }}
           />
           
           <EditChartModal
             isOpen={showEditChartModal}
             onClose={() => setShowEditChartModal(false)}
-            onSuccess={handleChartEditSuccess}
+            onSuccess={() => {
+              showToast('차트가 성공적으로 수정되었습니다!', 'success');
+            }}
           />
         </>
       )}
+      
+      {/* 토스트 알림 */}
+      <Toast
+        message={toast.message}
+        type={toast.type}
+        isVisible={toast.isVisible}
+        onClose={hideToast}
+      />
+      
     </div>
   );
 }

@@ -18,9 +18,9 @@ import {
 } from '@dnd-kit/sortable';
 import { ChartMetaResponse, TierPart, TierItem, ChartListItem, SongData, ChartData } from '@/types/api';
 import { TierSection } from './TierSection';
-import { AddChartToTierModal } from './AddChartToTierModal';
 import { getDifficultyColor } from '@/utils/colors';
 import { apiService } from '@/services/api';
+import AddChartToTierModal from './AddChartToTierModal';
 
 interface TierPartEditorProps {
   tierPart: TierPart;
@@ -32,6 +32,8 @@ interface TierPartEditorProps {
 export function TierPartEditor({ tierPart, chartMeta, onUpdate, onClose }: TierPartEditorProps) {
   const [tierList, setTierList] = useState<TierItem[]>(tierPart.tierList || []);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showAddChartModal, setShowAddChartModal] = useState(false);
+  const [selectedTierForAdd, setSelectedTierForAdd] = useState<number | null>(null);
   const [activeChart, setActiveChart] = useState<{chart: ChartListItem, song: SongData, chartData: ChartData} | null>(null);
 
   const sensors = useSensors(
@@ -57,6 +59,28 @@ export function TierPartEditor({ tierPart, chartMeta, onUpdate, onClose }: TierP
       ...tierPart,
       tierList: newTierList
     });
+  };
+
+  const handleAddChartToTier = (tierIdx: number) => {
+    setSelectedTierForAdd(tierIdx);
+    setShowAddChartModal(true);
+  };
+
+  const handleChartAdded = (chartIdx: number) => {
+    if (selectedTierForAdd !== null) {
+      const newChart: ChartListItem = {
+        chartIdx,
+        targetScore: null
+      };
+      
+      setTierList(prev => prev.map(tier => 
+        tier.tierIdx === selectedTierForAdd 
+          ? { ...tier, chartList: [...tier.chartList, newChart] }
+          : tier
+      ));
+    }
+    setShowAddChartModal(false);
+    setSelectedTierForAdd(null);
   };
 
   const addChartToTier = (tierIdx: number, chartIdx: number, targetScore: number | null) => {
@@ -249,6 +273,10 @@ export function TierPartEditor({ tierPart, chartMeta, onUpdate, onClose }: TierP
         ...tierPart,
         tierList,
       });
+      
+      // 티어 데이터 업데이트 성공 후 차트 메타데이터 캐시 갱신
+      await apiService.refreshChartMetaCache();
+      
       alert('Tier data saved successfully');
     } catch (error) {
       console.error('Save tier data error:', error);
@@ -360,6 +388,7 @@ export function TierPartEditor({ tierPart, chartMeta, onUpdate, onClose }: TierP
                 onUpdateChart={(chartIdx, updates) => updateChartInTier(tier.tierIdx, chartIdx, updates)}
                 onRemoveChart={(chartIdx) => removeChartFromTier(tier.tierIdx, chartIdx)}
                 onReorderCharts={(oldIndex, newIndex) => reorderChartsInTier(tier.tierIdx, oldIndex, newIndex)}
+                onAddChart={handleAddChartToTier}
                 onRemoveTier={() => removeTier(tier.tierIdx)}
                 onRenameTier={(newName) => renameTier(tier.tierIdx, newName)}
                 enableDndContext={false}
@@ -391,17 +420,13 @@ export function TierPartEditor({ tierPart, chartMeta, onUpdate, onClose }: TierP
         </DndContext>
       </div>
 
-      {showAddModal && (
-        <AddChartToTierModal
-          chartMeta={chartMeta}
-          tierList={tierList}
-          onAddToTier={addChartToTier}
-          onAddMultipleToTier={addMultipleChartsToTier}
-          onClose={() => {
-            setShowAddModal(false);
-          }}
-        />
-      )}
+      {/* 차트 추가 모달 */}
+      <AddChartToTierModal
+        isOpen={showAddChartModal}
+        onClose={() => setShowAddChartModal(false)}
+        onAdd={handleChartAdded}
+        chartMeta={chartMeta}
+      />
     </div>
   );
 }
