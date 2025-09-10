@@ -4,7 +4,7 @@ import { getNextjsApiUrl } from '@/config/api';
 
 class ApiService {
   private getBaseURL(): string {
-    // Next.js API 경로 사용 (basePath 포함)
+    // Next.js API 사용 (개발과 프로덕션 동일)
     return getNextjsApiUrl();
   }
 

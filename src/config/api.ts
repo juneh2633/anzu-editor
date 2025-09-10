@@ -20,32 +20,19 @@ export const getApiBaseUrl = () => {
   return API_CONFIG[environment as keyof typeof API_CONFIG]?.baseUrl || API_CONFIG.development.baseUrl;
 };
 
-// Next.js API 경로를 위한 설정 (basePath 고려)
+// Next.js API 경로를 위한 설정 (basePath 제거)
 export const getNextjsApiUrl = () => {
   if (typeof window !== 'undefined') {
-    // 클라이언트에서 Next.js API 호출
-    // 개발 환경에서는 basePath 없음, 프로덕션에서만 basePath 적용
-    const isProduction = process.env.NODE_ENV === 'production';
-    const basePath = isProduction ? '/homepage' : '';
-    return `${window.location.origin}${basePath}/api`;
+    // 클라이언트에서 Next.js API 호출 (basePath 없음)
+    return `${window.location.origin}/api`;
   }
   
   // 서버사이드에서는 상대경로 사용
   return '/api';
 };
 
-// NestJS 서버의 직접 API 경로를 위한 설정
+// NestJS 서버의 직접 API 경로를 위한 설정 (개발과 프로덕션 동일)
 export const getNestjsApiUrl = () => {
-  const environment = process.env.NODE_ENV || 'development';
-  
-  if (environment === 'production') {
-    // 프로덕션: 같은 서버의 NestJS (포트 3000)
-    if (typeof window !== 'undefined') {
-      // 클라이언트에서 직접 NestJS 서버 호출
-      return `${window.location.origin}:3000`;
-    }
-  }
-  
-  // 개발: 외부 도메인 사용
-  return API_CONFIG[environment as keyof typeof API_CONFIG]?.baseUrl || 'https://juneh2633.ddns.net';
+  // 개발과 프로덕션 모두 외부 도메인 사용
+  return API_CONFIG.development.baseUrl || 'https://juneh2633.ddns.net';
 }; 
