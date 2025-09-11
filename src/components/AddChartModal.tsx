@@ -34,6 +34,7 @@ const AddChartModal: React.FC<AddChartModalProps> = ({ isOpen, onClose, onSucces
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string>('');
+  const [showConfirmation, setShowConfirmation] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -105,8 +106,12 @@ const AddChartModal: React.FC<AddChartModalProps> = ({ isOpen, onClose, onSucces
     }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setShowConfirmation(true);
+  };
+
+  const handleFinalSubmit = async () => {
     setIsLoading(true);
     setError('');
 
@@ -143,6 +148,10 @@ const AddChartModal: React.FC<AddChartModalProps> = ({ isOpen, onClose, onSucces
     }
   };
 
+  const handleCancel = () => {
+    setShowConfirmation(false);
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -163,7 +172,8 @@ const AddChartModal: React.FC<AddChartModalProps> = ({ isOpen, onClose, onSucces
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        {!showConfirmation ? (
+          <form onSubmit={handleSubmit} className="space-y-6">
           {/* 차트 검색 섹션 */}
           <div>
             <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">차트 검색</h3>
@@ -482,6 +492,52 @@ const AddChartModal: React.FC<AddChartModalProps> = ({ isOpen, onClose, onSucces
             </button>
           </div>
         </form>
+        ) : (
+          <div className="space-y-6">
+            <div className="text-center">
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">차트 추가 확인</h3>
+              <p className="text-slate-600 dark:text-slate-400 mb-6">다음 정보로 차트를 추가하시겠습니까?</p>
+            </div>
+
+            <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4 border border-slate-200 dark:border-slate-700">
+              <h4 className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">차트 정보</h4>
+              <pre className="text-xs text-slate-600 dark:text-slate-400 whitespace-pre-wrap overflow-x-auto">
+                {JSON.stringify({
+                  songIdx: formData.songIdx,
+                  type: formData.type,
+                  level: formData.level,
+                  effectorName: formData.effectorName,
+                  illustratorName: formData.illustratorName,
+                  radar: formData.radar
+                }, null, 2)}
+              </pre>
+            </div>
+
+            {error && (
+              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+                <p className="text-red-600 dark:text-red-400 text-sm">{error}</p>
+              </div>
+            )}
+
+            <div className="flex justify-end space-x-3">
+              <button
+                type="button"
+                onClick={handleCancel}
+                className="px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors"
+              >
+                수정
+              </button>
+              <button
+                type="button"
+                onClick={handleFinalSubmit}
+                disabled={isLoading}
+                className="px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors"
+              >
+                {isLoading ? '추가 중...' : '차트 추가'}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
