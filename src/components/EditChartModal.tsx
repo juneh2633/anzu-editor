@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { UpdateChartDto, ChartMetaResponse, SongData, ChartData, RadarDto } from '@/types/api';
 import { apiService } from '@/services/api';
 import { getDifficultyColor } from '@/utils/colors';
@@ -16,7 +16,6 @@ interface EditChartModalProps {
 const EditChartModal: React.FC<EditChartModalProps> = ({ isOpen, onClose, onSuccess, chartIdx: propChartIdx }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [chartMeta, setChartMeta] = useState<ChartMetaResponse | null>(null);
-  const [filteredCharts, setFilteredCharts] = useState<Array<{song: SongData, chart: ChartData}>>([]);
   const [selectedChart, setSelectedChart] = useState<{song: SongData, chart: ChartData} | null>(null);
   const [chartIdx, setChartIdx] = useState('');
   const [formData, setFormData] = useState<Omit<UpdateChartDto, 'chartIdx'>>({
@@ -52,14 +51,7 @@ const EditChartModal: React.FC<EditChartModalProps> = ({ isOpen, onClose, onSucc
       const data = await apiService.getChartMeta();
       setChartMeta(data);
       
-      // 모든 차트를 초기 목록으로 설정
-      const allCharts: Array<{song: SongData, chart: ChartData}> = [];
-      data.chartData.forEach(song => {
-        song.chart.forEach(chart => {
-          allCharts.push({ song, chart });
-        });
-      });
-      setFilteredCharts(allCharts);
+      // 차트 메타데이터 로드 완료
     } catch (err) {
       console.error('차트 메타데이터 로딩 실패:', err);
     }
@@ -113,9 +105,18 @@ const EditChartModal: React.FC<EditChartModalProps> = ({ isOpen, onClose, onSucc
     }
   };
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!chartMeta) return;
+  // 라이브 서치를 위한 useMemo
+  const filteredCharts = useMemo(() => {
+    if (!searchTerm.trim() || !chartMeta?.chartData) {
+      // 검색어가 없으면 모든 차트 표시
+      const allCharts: Array<{song: SongData, chart: ChartData}> = [];
+      chartMeta?.chartData.forEach(song => {
+        song.chart.forEach(chart => {
+          allCharts.push({ song, chart });
+        });
+      });
+      return allCharts;
+    }
 
     const searchLower = searchTerm.toLowerCase();
     const filtered: Array<{song: SongData, chart: ChartData}> = [];
@@ -125,17 +126,17 @@ const EditChartModal: React.FC<EditChartModalProps> = ({ isOpen, onClose, onSucc
         const matchesTitle = song.title.toLowerCase().includes(searchLower);
         const matchesArtist = song.artist.toLowerCase().includes(searchLower);
         const matchesSongId = song.songIdx.toString().includes(searchTerm);
-        const matchesSongIdx = song.songIdx.toString().includes(searchTerm);
+        const matchesChartIdx = chart.chartIdx.toString().includes(searchTerm);
         const matchesChartType = chart.type.toLowerCase().includes(searchLower);
 
-        if (matchesTitle || matchesArtist || matchesSongId || matchesSongIdx || matchesChartType) {
+        if (matchesTitle || matchesArtist || matchesSongId || matchesChartIdx || matchesChartType) {
           filtered.push({ song, chart });
         }
       });
     });
 
-    setFilteredCharts(filtered);
-  };
+    return filtered.slice(0, 50); // 최대 50개로 제한
+  }, [searchTerm, chartMeta]);
 
   const handleChartSelect = (song: SongData, chart: ChartData) => {
     setSelectedChart({ song, chart });
@@ -231,15 +232,20 @@ const EditChartModal: React.FC<EditChartModalProps> = ({ isOpen, onClose, onSucc
             <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">차트 검색</h3>
             
             {/* 검색 폼 */}
-            <form onSubmit={handleSearch} className="mb-4">
+            <div className="mb-4">
               <input
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="곡 제목, 아티스트, 또는 Song ID로 검색"
+                placeholder="곡 제목, 아티스트, Song ID, Chart ID로 검색"
                 className="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-slate-800 dark:text-slate-100"
               />
-            </form>
+              {searchTerm && (
+                <div className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+                  {filteredCharts.length}개 결과
+                </div>
+              )}
+            </div>
 
             {/* 검색 결과 */}
             <div className="max-h-64 overflow-y-auto border border-slate-200 dark:border-slate-700 rounded-lg">
