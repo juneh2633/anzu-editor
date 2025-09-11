@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { apiService } from '@/services/api';
 import { ChartMetaResponse } from '@/types/api';
+import { getDifficultyColor } from '@/utils/colors';
 
 interface ChartInfo {
   chartIdx: number;
@@ -18,6 +19,7 @@ interface SearchResult {
   type: string;
   effectorName: string;
   illustratorName: string;
+  jacket: string;
 }
 
 export default function ChartSearch() {
@@ -86,7 +88,8 @@ export default function ChartSearch() {
               level: chart.level || 0,
               type: chart.type || 'Unknown',
               effectorName: chart.effectorName || '',
-              illustratorName: chart.illustratorName || ''
+              illustratorName: chart.illustratorName || '',
+              jacket: chart.jacket || ''
             });
           }
         });
@@ -191,12 +194,27 @@ export default function ChartSearch() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-4">
                       {/* 자켓 이미지 */}
-                      <div className="w-16 h-16 flex-shrink-0">
-                        <div className="w-full h-full bg-slate-200 dark:bg-slate-700 rounded-lg flex items-center justify-center">
-                          <svg className="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                          </svg>
-                        </div>
+                      <div 
+                        className="w-12 h-12 rounded border-2 bg-gray-200 dark:bg-slate-700 flex-shrink-0 overflow-hidden"
+                        style={{ borderColor: chartMeta?.metaData?.type ? getDifficultyColor(result.type, chartMeta.metaData.type) : '#e5e7eb' }}
+                      >
+                        {result.jacket ? (
+                          <img
+                            src={result.jacket}
+                            alt={`${result.songTitle} jacket`}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement;
+                              target.style.display = 'none';
+                            }}
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center">
+                            <svg className="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                          </div>
+                        )}
                       </div>
                       
                       <div className="flex-1">
