@@ -1,6 +1,6 @@
 import { ChartMetaResponse, TierPart, TierResponse, NewSongDto, SongIdxWithTypeDto, NewChartDto, UpdateChartDto, VersionResponse } from '@/types/api';
 import { authService } from './auth';
-import { getNextjsApiUrl } from '@/config/api';
+import { getNextjsApiUrl, getNestjsApiUrl } from '@/config/api';
 
 class ApiService {
   private getBaseURL(): string {
@@ -36,7 +36,25 @@ class ApiService {
   }
 
   async getChartMeta(): Promise<ChartMetaResponse> {
-    return this.makeRequest<ChartMetaResponse>('/chart-meta');
+    const token = authService.getToken();
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const response = await fetch(`${getNestjsApiUrl()}/chart/meta`, {
+      method: 'GET',
+      headers,
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    return response.json();
   }
 
   async getTierData(): Promise<TierResponse> {
@@ -85,25 +103,47 @@ class ApiService {
   }
 
   async addNewSong(songData: NewSongDto): Promise<void> {
-    try {
-      await this.makeRequest<void>('/admin/song', {
-        method: 'POST',
-        body: JSON.stringify(songData),
-      });
-    } catch (error: any) {
-      // 404 에러인 경우 더 명확한 메시지 제공
-      if (error.message?.includes('404')) {
-        throw new Error('곡 추가 API가 아직 구현되지 않았습니다. (404)');
-      }
-      throw error;
+    const token = authService.getToken();
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const response = await fetch(`${getNestjsApiUrl()}/admin/song`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(songData),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
   }
 
-  // 백엔드 API가 구현되면 활성화
-  // async getMaxSongIdx(): Promise<number> {
-  //   const response = await this.makeRequest<{ maxSongIdx: number }>('/admin/songIdx');
-  //   return response.maxSongIdx;
-  // }
+  async getMaxSongIdx(): Promise<{ maxSongIdx: number }> {
+    const token = authService.getToken();
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const response = await fetch(`${getNestjsApiUrl()}/admin/songIdx`, {
+      method: 'GET',
+      headers,
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    return response.json();
+  }
 
   async uploadJacket(songIdxWithType: SongIdxWithTypeDto, file: File): Promise<void> {
     try {
@@ -141,30 +181,44 @@ class ApiService {
   }
 
   async addNewChart(chartData: NewChartDto): Promise<void> {
-    try {
-      await this.makeRequest<void>('/admin/chart', {
-        method: 'POST',
-        body: JSON.stringify(chartData),
-      });
-    } catch (error: any) {
-      if (error.message?.includes('404')) {
-        throw new Error('차트 추가 API가 아직 구현되지 않았습니다. (404)');
-      }
-      throw error;
+    const token = authService.getToken();
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const response = await fetch(`${getNestjsApiUrl()}/admin/chart`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(chartData),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
   }
 
   async updateChart(chartIdx: number, chartData: UpdateChartDto): Promise<void> {
-    try {
-      await this.makeRequest<void>(`/admin/chart/${chartIdx}`, {
-        method: 'PUT',
-        body: JSON.stringify(chartData),
-      });
-    } catch (error: any) {
-      if (error.message?.includes('404')) {
-        throw new Error('차트 수정 API가 아직 구현되지 않았습니다. (404)');
-      }
-      throw error;
+    const token = authService.getToken();
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const response = await fetch(`${getNestjsApiUrl()}/admin/chart/${chartIdx}`, {
+      method: 'PUT',
+      headers,
+      body: JSON.stringify(chartData),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
   }
 
@@ -181,9 +235,24 @@ class ApiService {
   // 차트 메타데이터 캐시 갱신
   async refreshChartMetaCache(): Promise<void> {
     try {
-      await this.makeRequest<void>('/chart/meta', {
+      const token = authService.getToken();
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const response = await fetch(`${getNestjsApiUrl()}/chart/meta`, {
         method: 'POST',
+        headers,
       });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
       console.log('차트 메타데이터 캐시가 성공적으로 갱신되었습니다.');
     } catch (error: any) {
       console.warn('차트 메타데이터 캐시 갱신 실패:', error.message);

@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { UpdateChartDto, ChartMetaResponse, SongData, ChartData, RadarDto } from '@/types/api';
 import { apiService } from '@/services/api';
 import { getDifficultyColor } from '@/utils/colors';
+import { getTypeCode } from '@/utils/typeConverter';
 
 interface EditChartModalProps {
   isOpen: boolean;
@@ -88,18 +89,18 @@ const EditChartModal: React.FC<EditChartModalProps> = ({ isOpen, onClose, onSucc
         setSelectedChart(foundChart);
         setChartIdx(chartIdx.toString());
         setFormData({
-          songIdx: foundChart.song.songIdx,
-          level: foundChart.chart.level,
-          type: foundChart.chart.type,
-          effectorName: foundChart.chart.effector || '',
-          illustratorName: foundChart.chart.illustrator || '',
+          songIdx: (foundChart as {song: SongData, chart: ChartData}).song.songIdx,
+          level: (foundChart as {song: SongData, chart: ChartData}).chart.level,
+          type: (foundChart as {song: SongData, chart: ChartData}).chart.type,
+          effectorName: (foundChart as {song: SongData, chart: ChartData}).chart.effector || '',
+          illustratorName: (foundChart as {song: SongData, chart: ChartData}).chart.illustrator || '',
           radar: {
-            notes: foundChart.chart.radar.notes || 0,
-            peak: foundChart.chart.radar.peak || 0,
-            tsumami: foundChart.chart.radar.tsumami || 0,
-            tricky: foundChart.chart.radar.tricky || 0,
-            handtrip: foundChart.chart.radar.handtrip || 0,
-            onehand: foundChart.chart.radar.onehand || 0
+            notes: (foundChart as {song: SongData, chart: ChartData}).chart.radar.notes || 0,
+            peak: (foundChart as {song: SongData, chart: ChartData}).chart.radar.peak || 0,
+            tsumami: (foundChart as {song: SongData, chart: ChartData}).chart.radar.tsumami || 0,
+            tricky: (foundChart as {song: SongData, chart: ChartData}).chart.radar.tricky || 0,
+            handtrip: (foundChart as {song: SongData, chart: ChartData}).chart.radar.handtrip || 0,
+            onehand: (foundChart as {song: SongData, chart: ChartData}).chart.radar.onehand || 0
           } as RadarDto
         });
       } else {
@@ -169,8 +170,14 @@ const EditChartModal: React.FC<EditChartModalProps> = ({ isOpen, onClose, onSucc
     }
 
     try {
-      console.log('차트 수정 시도:', { chartIdx: propChartIdx, formData });
-      await apiService.updateChart(propChartIdx, formData);
+      // 차트 타입을 API 형식으로 변환
+      const convertedFormData = {
+        ...formData,
+        type: getTypeCode(formData.type)
+      };
+
+      console.log('차트 수정 시도:', { chartIdx: propChartIdx, formData: convertedFormData });
+      await apiService.updateChart(propChartIdx, { ...convertedFormData, chartIdx: propChartIdx });
       console.log('차트 수정 API 호출 성공');
       
       // 차트 수정 성공 후 차트 메타데이터 캐시 갱신
@@ -337,12 +344,23 @@ const EditChartModal: React.FC<EditChartModalProps> = ({ isOpen, onClose, onSucc
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
                 차트 타입
               </label>
-              <input
-                type="text"
+              <select
                 value={formData.type}
                 onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value }))}
                 className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-slate-800 dark:text-slate-100"
-              />
+              >
+                <option value="">타입을 선택하세요</option>
+                <option value="NOV">NOV</option>
+                <option value="ADV">ADV</option>
+                <option value="EXH">EXH</option>
+                <option value="MXM">MXM</option>
+                <option value="INF">INF</option>
+                <option value="GRV">GRV</option>
+                <option value="HVN">HVN</option>
+                <option value="VVD">VVD</option>
+                <option value="EXD">EXD</option>
+                <option value="ULT">ULT</option>
+              </select>
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">

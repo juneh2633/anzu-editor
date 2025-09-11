@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { NewChartDto, ChartMetaResponse, SongData, ChartData, RadarDto } from '@/types/api';
 import { apiService } from '@/services/api';
 import { getDifficultyColor } from '@/utils/colors';
+import { getTypeCode } from '@/utils/typeConverter';
 
 interface AddChartModalProps {
   isOpen: boolean;
@@ -109,7 +110,13 @@ const AddChartModal: React.FC<AddChartModalProps> = ({ isOpen, onClose, onSucces
     setError('');
 
     try {
-      await apiService.addNewChart(formData);
+      // 차트 타입을 API 형식으로 변환
+      const convertedFormData = {
+        ...formData,
+        type: getTypeCode(formData.type)
+      };
+
+      await apiService.addNewChart(convertedFormData);
       
       // 차트 추가 성공 후 차트 메타데이터 캐시 갱신
       await apiService.refreshChartMetaCache();
@@ -272,6 +279,8 @@ const AddChartModal: React.FC<AddChartModalProps> = ({ isOpen, onClose, onSucces
                 <option value="GRV">GRV</option>
                 <option value="HVN">HVN</option>
                 <option value="VVD">VVD</option>
+                <option value="EXD">EXD</option>
+                <option value="ULT">ULT</option>
               </select>
             </div>
           </div>
