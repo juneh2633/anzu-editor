@@ -35,6 +35,8 @@ export default function ChartSearch() {
       setLoading(true);
       setError(null);
       const data = await apiService.getChartMeta();
+      console.log('차트 메타데이터 로드됨:', data);
+      console.log('chartData 첫 번째 항목:', data.chartData?.[0]);
       setChartMeta(data);
     } catch (err) {
       console.error('차트 메타데이터 로딩 오류:', err);
@@ -46,36 +48,55 @@ export default function ChartSearch() {
 
   // 메타데이터에서 검색 결과를 실시간으로 계산
   const searchResults = useMemo(() => {
-    if (!searchTerm.trim() || !chartMeta?.chartData || !Array.isArray(chartMeta.chartData)) return [];
+    console.log('검색 실행:', { searchTerm, chartMeta: chartMeta?.chartData?.length });
+    
+    if (!searchTerm.trim() || !chartMeta?.chartData || !Array.isArray(chartMeta.chartData)) {
+      console.log('검색 조건 불만족:', { 
+        hasSearchTerm: !!searchTerm.trim(), 
+        hasChartMeta: !!chartMeta?.chartData,
+        isArray: Array.isArray(chartMeta?.chartData)
+      });
+      return [];
+    }
 
     const searchLower = searchTerm.toLowerCase();
     const results: SearchResult[] = [];
 
-    chartMeta.chartData.forEach(({ song, chart }) => {
-      // song과 chart가 존재하는지 확인
-      if (!song || !chart) return;
-      const matchesSearch = 
-        (chart.chartIdx && chart.chartIdx.toString().includes(searchTerm)) ||
-        (song.title && song.title.toLowerCase().includes(searchLower)) ||
-        (song.artist && song.artist.toLowerCase().includes(searchLower)) ||
-        (song.songid && song.songid.toLowerCase().includes(searchLower));
+    chartMeta.chartData.forEach((song) => {
+      // song이 존재하는지 확인
+      if (!song) return;
+      
+      // 각 곡의 차트들을 검색
+      if (song.chart && Array.isArray(song.chart)) {
+        song.chart.forEach((chart) => {
+          if (!chart) return;
+          
+          const matchesSearch = 
+            (chart.chartIdx && chart.chartIdx.toString().includes(searchTerm)) ||
+            (song.title && song.title.toLowerCase().includes(searchLower)) ||
+            (song.artist && song.artist.toLowerCase().includes(searchLower)) ||
+            (song.songIdx && song.songIdx.toString().includes(searchTerm));
 
-      if (matchesSearch) {
-        results.push({
-          chartIdx: chart.chartIdx || 0,
-          songTitle: song.title || 'Unknown Title',
-          artist: song.artist || 'Unknown Artist',
-          songId: song.songid || 'Unknown ID',
-          level: chart.level || 0,
-          type: chart.type || 'Unknown',
-          effectorName: chart.effectorName || '',
-          illustratorName: chart.illustratorName || ''
+          if (matchesSearch) {
+            results.push({
+              chartIdx: chart.chartIdx || 0,
+              songTitle: song.title || 'Unknown Title',
+              artist: song.artist || 'Unknown Artist',
+              songId: song.songIdx?.toString() || 'Unknown ID',
+              level: chart.level || 0,
+              type: chart.type || 'Unknown',
+              effectorName: chart.effectorName || '',
+              illustratorName: chart.illustratorName || ''
+            });
+          }
         });
       }
     });
 
     // 최대 50개 결과로 제한
-    return results.slice(0, 50);
+    const finalResults = results.slice(0, 50);
+    console.log('검색 결과:', finalResults.length, '개');
+    return finalResults;
   }, [searchTerm, chartMeta]);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -169,9 +190,15 @@ export default function ChartSearch() {
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-4">
-                      <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
-                        <span className="text-lg font-bold text-white">{result.level}</span>
+                      {/* 자켓 이미지 */}
+                      <div className="w-16 h-16 flex-shrink-0">
+                        <div className="w-full h-full bg-slate-200 dark:bg-slate-700 rounded-lg flex items-center justify-center">
+                          <svg className="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                        </div>
                       </div>
+                      
                       <div className="flex-1">
                         <h4 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
                           {result.songTitle}
