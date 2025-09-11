@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { apiService } from '@/services/api';
+import { ChartMetaResponse } from '@/types/api';
 
 interface ChartInfo {
   chartIdx: number;
@@ -9,64 +10,76 @@ interface ChartInfo {
 }
 
 interface SearchResult {
-  partName: string;
-  tier: string;
   chartIdx: number;
-  targetScore: number | null;
+  songTitle: string;
+  artist: string;
+  songId: string;
+  level: number;
+  type: string;
+  effectorName: string;
+  illustratorName: string;
 }
 
 export default function ChartSearch() {
   const [searchTerm, setSearchTerm] = useState('');
-  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [tierData, setTierData] = useState<any[]>([]);
+  const [chartMeta, setChartMeta] = useState<ChartMetaResponse | null>(null);
 
   useEffect(() => {
-    loadTierData();
+    loadChartMeta();
   }, []);
 
-  const loadTierData = async () => {
+  const loadChartMeta = async () => {
     try {
       setLoading(true);
       setError(null);
-      const data = await apiService.getTierData();
-      setTierData(data);
+      const data = await apiService.getChartMeta();
+      setChartMeta(data);
     } catch (err) {
-      console.error('티어 데이터 로딩 오류:', err);
-      setError('티어 데이터를 불러오는데 실패했습니다.');
+      console.error('차트 메타데이터 로딩 오류:', err);
+      setError('차트 메타데이터를 불러오는데 실패했습니다.');
     } finally {
       setLoading(false);
     }
   };
 
-  const searchCharts = () => {
-    if (!searchTerm.trim() || !tierData.length) return;
+  // 메타데이터에서 검색 결과를 실시간으로 계산
+  const searchResults = useMemo(() => {
+    if (!searchTerm.trim() || !chartMeta?.chartData || !Array.isArray(chartMeta.chartData)) return [];
 
-    const results: SearchResult[] = [];
     const searchLower = searchTerm.toLowerCase();
+    const results: SearchResult[] = [];
 
-    tierData.forEach(part => {
-      part.tierList.forEach(tier => {
-        tier.chartList.forEach((chart: ChartInfo) => {
-          if (chart.chartIdx.toString().includes(searchTerm)) {
-            results.push({
-              partName: part.partInfo.partName,
-              tier: tier.tier,
-              chartIdx: chart.chartIdx,
-              targetScore: chart.targetScore
-            });
-          }
+    chartMeta.chartData.forEach(({ song, chart }) => {
+      // song과 chart가 존재하는지 확인
+      if (!song || !chart) return;
+      const matchesSearch = 
+        (chart.chartIdx && chart.chartIdx.toString().includes(searchTerm)) ||
+        (song.title && song.title.toLowerCase().includes(searchLower)) ||
+        (song.artist && song.artist.toLowerCase().includes(searchLower)) ||
+        (song.songid && song.songid.toLowerCase().includes(searchLower));
+
+      if (matchesSearch) {
+        results.push({
+          chartIdx: chart.chartIdx || 0,
+          songTitle: song.title || 'Unknown Title',
+          artist: song.artist || 'Unknown Artist',
+          songId: song.songid || 'Unknown ID',
+          level: chart.level || 0,
+          type: chart.type || 'Unknown',
+          effectorName: chart.effectorName || '',
+          illustratorName: chart.illustratorName || ''
         });
-      });
+      }
     });
 
-    setSearchResults(results);
-  };
+    // 최대 50개 결과로 제한
+    return results.slice(0, 50);
+  }, [searchTerm, chartMeta]);
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    searchCharts();
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value);
   };
 
   if (loading) {
@@ -118,33 +131,29 @@ export default function ChartSearch() {
         <div className="flex items-center justify-between mb-6">
           <div>
             <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">차트 검색</h2>
-            <p className="text-slate-600 dark:text-slate-400 mt-1">차트 ID로 티어 정보를 검색하세요</p>
+            <p className="text-slate-600 dark:text-slate-400 mt-1">차트 ID, 곡 제목, 아티스트, Song ID로 실시간 검색하세요</p>
           </div>
         </div>
 
         {/* 검색 폼 */}
-        <form onSubmit={handleSearch} className="mb-8">
+        <div className="mb-8">
           <div className="flex gap-4">
             <div className="flex-1">
               <input
                 type="text"
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="차트 ID를 입력하세요 (예: 2475)"
+                onChange={handleSearchChange}
+                placeholder="차트 ID, 곡 제목, 아티스트, Song ID로 검색하세요"
                 className="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-slate-800 dark:text-slate-100"
               />
             </div>
-            <button
-              type="submit"
-              className="inline-flex items-center px-6 py-3 text-sm font-medium text-white bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 rounded-xl shadow-sm transition-all duration-200 hover:shadow-md"
-            >
-              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-              검색
-            </button>
+            <div className="flex items-center px-4 py-3 text-sm text-slate-500 dark:text-slate-400">
+              {searchTerm && (
+                <span>{searchResults.length}개 결과</span>
+              )}
+            </div>
           </div>
-        </form>
+        </div>
 
         {/* 검색 결과 */}
         {searchResults.length > 0 && (
@@ -156,26 +165,33 @@ export default function ChartSearch() {
               {searchResults.map((result, index) => (
                 <div
                   key={index}
-                  className="bg-slate-50 dark:bg-slate-800 rounded-xl p-6 border border-slate-200 dark:border-slate-700"
+                  className="bg-slate-50 dark:bg-slate-800 rounded-xl p-6 border border-slate-200 dark:border-slate-700 hover:shadow-md transition-shadow"
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-4">
                       <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
-                        <span className="text-lg font-bold text-white">{result.tier}</span>
+                        <span className="text-lg font-bold text-white">{result.level}</span>
                       </div>
-                      <div>
+                      <div className="flex-1">
                         <h4 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-                          차트 ID: {result.chartIdx}
+                          {result.songTitle}
                         </h4>
                         <p className="text-slate-600 dark:text-slate-400">
-                          {result.partName} • Tier {result.tier}
+                          {result.artist} • {result.type} • Level {result.level}
+                        </p>
+                        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                          Chart ID: {result.chartIdx} • Song ID: {result.songId}
                         </p>
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm text-slate-500 dark:text-slate-400">목표 점수</p>
-                      <p className="text-xl font-bold text-slate-900 dark:text-slate-100">
-                        {result.targetScore ? result.targetScore.toLocaleString() : 'N/A'}
+                      <p className="text-sm text-slate-500 dark:text-slate-400">Effector</p>
+                      <p className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                        {result.effectorName || 'N/A'}
+                      </p>
+                      <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">Illustrator</p>
+                      <p className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                        {result.illustratorName || 'N/A'}
                       </p>
                     </div>
                   </div>
@@ -208,7 +224,7 @@ export default function ChartSearch() {
             </div>
             <h3 className="text-xl font-semibold text-slate-900 dark:text-slate-100 mb-2">차트를 검색해보세요</h3>
             <p className="text-slate-500 dark:text-slate-400">
-              차트 ID를 입력하여 해당 차트의 티어 정보를 확인할 수 있습니다.
+              차트 ID, 곡 제목, 아티스트, Song ID를 입력하여 실시간으로 차트를 검색할 수 있습니다.
             </p>
           </div>
         )}
